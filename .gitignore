@@ -1,0 +1,9 @@
+node_modules/
+dist/
+src/managed/
+*.log
+.env
+.env.local
+.DS_Store
+coverage/
+.tmp/

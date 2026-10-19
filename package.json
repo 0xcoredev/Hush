@@ -1,0 +1,31 @@
+{
+  "name": "hush",
+  "version": "0.1.0",
+  "description": "Hush - a privacy-first anonymous confession platform on Midnight, built with Compact.",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "compact": "compact compile contracts/hush.compact src/managed/hush",
+    "compact:watch": "compact compile contracts/hush.compact src/managed/hush --watch",
+    "test": "npm run compact && node --test --experimental-strip-types tests/",
+    "test:unit": "node --test --experimental-strip-types tests/hush.test.js",
+    "lint": "compact check contracts/hush.compact",
+    "clean": "rm -rf src/managed dist .tmp"
+  },
+  "devDependencies": {
+    "@midnight-ntwrk/compact": "^0.27.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "midnight",
+    "midnightntwrk",
+    "compact",
+    "privacy",
+    "zk",
+    "anonymous",
+    "confession",
+    "blockchain"
+  ]
+}

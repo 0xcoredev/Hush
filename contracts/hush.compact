@@ -1,0 +1,169 @@
+pragma language_version 0.23;
+
+import CompactStandardLibrary;
+
+// Hush - Anonymous confession platform on Midnight.
+//
+// Privacy design:
+//   - Confession *content* never touches the public ledger. Only a
+//     persistentCommit over the content hash + the poster's DApp-scoped public
+//     key is stored, proving the confession exists and is owned by someone,
+//     without revealing who or what they confessed.
+//   - Poster identity is represented by a DApp-scoped public key derived from
+//     a local secret via persistentHash, so the same user is untrackable across
+//     other Midnight DApps and cannot be correlated with on-chain activity.
+//   - A moderator role can flag a confession without revealing which moderator
+//     acted, by proving ownership of the moderator DApp key.
+//
+// Dual-ledger usage:
+//   - Public ledger: confession commitments, reaction commitments, counts,
+//     flagged set, moderator key commitment.
+//   - Private state (off-chain, via witnesses): the localSecretKey and the
+//     original confession content, which the poster retains and can optionally
+//     reveal later by presenting the preimage.
+
+export enum ConfessionState {
+  ACTIVE,
+  FLAGGED,
+  TAKEN_DOWN
+}
+
+export enum Category {
+  GENERAL,
+  WORK,
+  RELATIONSHIPS,
+  HEALTH,
+  FINANCE,
+  OTHER
+}
+
+// Public ledger state.
+//   - confessionCommits: set of all live confession commitments (active + flagged)
+//   - takenDownCommits: set of commitments whose poster removed them
+//   - flaggedCommits: set of commitments a moderator has flagged
+//   - reactionCommits: set of (reactor_key, confession_commit) commitments,
+//     enforcing one reaction per user per confession without revealing either
+//   - totalConfessions / totalReactions: public counters for traction metrics
+export sealed ledger moderator: Bytes<32>;
+export ledger confessionCommits: Set<Bytes<32>>;
+export ledger takenDownCommits: Set<Bytes<32>>;
+export ledger flaggedCommits: Set<Bytes<32>>;
+export ledger reactionCommits: Set<Bytes<32>>;
+export ledger totalConfessions: Counter;
+export ledger totalReactions: Counter;
+export ledger totalFlags: Counter;
+
+// Off-chain witness: returns the caller's local secret key. This value is
+// NEVER disclosed on-chain or in the generated proof. It is used only inside
+// circuits to derive DApp-scoped public keys and content commitments.
+witness localSecretKey(): Bytes<32>;
+
+constructor() {
+  const _secret = localSecretKey();
+  const modKey = getDappPublicKey(_secret);
+  moderator = disclose(modKey);
+  totalConfessions.increment(0);
+  totalReactions.increment(0);
+  totalFlags.increment(0);
+}
+
+// Post a confession.
+//   contentHash: a hash of the confession text, computed off-chain by the
+//                poster's client. Storing the hash (not the text) lets anyone
+//                verify a later reveal without storing private data on-chain.
+//   category: public category tag for filtering; content stays private.
+//
+// Returns the on-chain commitment that identifies this confession. Clients
+// should retain (contentHash, category, commitment, localSecret) off-chain
+// to support later reveal or take-down.
+export circuit confess(
+  contentHash: Bytes<32>,
+  category: Category
+): Bytes<32> {
+  const _secret = localSecretKey();
+  const posterKey = getDappPublicKey(_secret);
+  // Bind the content commitment to BOTH the content hash and the poster's
+  // DApp key. This means: (a) only the poster can later reveal or take down,
+  // and (b) the same content posted by a different user produces a different
+  // commitment, preventing trivial plagiarism tracking.
+  const commit = persistentCommit<Bytes<32>>(contentHash, posterKey);
+  assert(!confessionCommits.member(commit), "This confession already exists");
+  assert(!takenDownCommits.member(commit), "This confession was already taken down");
+  confessionCommits.insert(commit);
+  totalConfessions.increment(1);
+  // category is accepted as a parameter so clients can build category filters
+  // off-chain; we do not store it on the ledger to keep the public footprint
+  // minimal. Wave 3 will introduce a category-indexed commitment set.
+  return commit;
+}
+
+// React to a confession anonymously. One reaction per (user, confession) pair
+// is enforced via a persistentCommit over the reactor's DApp key + the
+// confession commitment. This set membership check prevents double-reactions
+// without revealing who reacted.
+export circuit react(confessionCommit: Bytes<32>): [] {
+  assert(confessionCommits.member(confessionCommit), "Confession does not exist");
+  const _secret = localSecretKey();
+  const reactorKey = getDappPublicKey(_secret);
+  const reactCommit = persistentCommit<Bytes<32>>(confessionCommit, reactorKey);
+  assert(!reactionCommits.member(reactCommit), "You have already reacted to this confession");
+  reactionCommits.insert(reactCommit);
+  totalReactions.increment(1);
+}
+
+// Take down your own confession. Proves ownership by regenerating the same
+// commitment from the local secret + the original content hash, without
+// revealing your identity. The commitment is moved to takenDownCommits so
+// clients can stop displaying it; no content trace remains on-chain.
+export circuit takeDown(contentHash: Bytes<32>): [] {
+  const _secret = localSecretKey();
+  const posterKey = getDappPublicKey(_secret);
+  const commit = persistentCommit<Bytes<32>>(contentHash, posterKey);
+  assert(confessionCommits.member(commit), "You did not post this confession");
+  confessionCommits.remove(commit);
+  flaggedCommits.remove(commit);
+  takenDownCommits.insert(commit);
+}
+
+// Moderator-only: flag a confession. The moderator proves they hold the
+// moderator DApp key WITHOUT revealing which moderator they are. This is the
+// core ZK-for-moderation pattern: accountability without identity exposure.
+export circuit flag(confessionCommit: Bytes<32>): [] {
+  assert(confessionCommits.member(confessionCommit), "Confession does not exist");
+  const _secret = localSecretKey();
+  const callerKey = getDappPublicKey(_secret);
+  assert(moderator == callerKey, "Only a moderator can flag confessions");
+  assert(!flaggedCommits.member(confessionCommit), "Confession is already flagged");
+  flaggedCommits.insert(confessionCommit);
+  totalFlags.increment(1);
+}
+
+// Moderator-only: clear a flag (e.g. after review). Same ZK-identity proof as
+// flag(); no one observing the chain learns which moderator acted.
+export circuit unflag(confessionCommit: Bytes<32>): [] {
+  const _secret = localSecretKey();
+  const callerKey = getDappPublicKey(_secret);
+  assert(moderator == callerKey, "Only a moderator can unflag confessions");
+  assert(flaggedCommits.member(confessionCommit), "Confession is not flagged");
+  flaggedCommits.remove(confessionCommit);
+}
+
+// Read-only circuits for clients / judges to inspect public ledger state.
+export pure circuit confessionCount(): Uint<32> {
+  return totalConfessions as Field as Uint<32>;
+}
+
+export pure circuit reactionCount(): Uint<32> {
+  return totalReactions as Field as Uint<32>;
+}
+
+export pure circuit flagCount(): Uint<32> {
+  return totalFlags as Field as Uint<32>;
+}
+
+// Derive a DApp-scoped public key from a local secret. The persistentHash
+// binds the key to this specific DApp namespace ("hush:pk:"), so the same
+// user is untrackable across other Midnight DApps.
+circuit getDappPublicKey(_secret: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "hush:pk:"), _secret]);
+}
