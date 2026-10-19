@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0e27"/>
+      <stop offset="0.5" stop-color="#15163a"/>
+      <stop offset="1" stop-color="#1a1b3a"/>
+    </linearGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0.6" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.4"/>
+    </radialGradient>
+    <linearGradient id="moon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8e8f0"/>
+      <stop offset="1" stop-color="#b8b8d4"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9b59b6" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#9b59b6" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#9b59b6" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softglow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background gradient -->
+  <rect width="1280" height="320" fill="url(#bg)"/>
+  <rect width="1280" height="320" fill="url(#vignette)"/>
+
+  <!-- Starfield (scattered, subtle) -->
+  <g fill="#e8e8f0">
+    <circle cx="120" cy="60" r="1.2" opacity="0.7"/>
+    <circle cx="220" cy="40" r="0.8" opacity="0.5"/>
+    <circle cx="340" cy="80" r="1" opacity="0.6"/>
+    <circle cx="80" cy="180" r="0.8" opacity="0.4"/>
+    <circle cx="180" cy="220" r="1.2" opacity="0.5"/>
+    <circle cx="1050" cy="50" r="1" opacity="0.6"/>
+    <circle cx="1150" cy="90" r="1.5" opacity="0.7"/>
+    <circle cx="1080" cy="240" r="1" opacity="0.5"/>
+    <circle cx="1180" cy="200" r="0.8" opacity="0.4"/>
+    <circle cx="980" cy="270" r="1.2" opacity="0.6"/>
+    <circle cx="60" cy="260" r="1" opacity="0.5"/>
+    <circle cx="1240" cy="160" r="0.8" opacity="0.4"/>
+  </g>
+
+  <!-- Centered logo group -->
+  <g transform="translate(440, 80)">
+    <!-- Crescent moon icon with glow -->
+    <g filter="url(#glow)">
+      <path d="M 110 80
+               A 60 60 0 1 1 50 20
+               A 46 46 0 1 0 110 80 Z"
+            fill="url(#moon)"/>
+    </g>
+
+    <!-- Whisper dots -->
+    <g fill="#9b59b6" opacity="0.9">
+      <circle cx="138" cy="60" r="3.5"/>
+      <circle cx="152" cy="48" r="3"/>
+      <circle cx="164" cy="38" r="2.5"/>
+      <circle cx="144" cy="76" r="2.5"/>
+      <circle cx="158" cy="70" r="2"/>
+    </g>
+
+    <!-- Wordmark -->
+    <text x="200" y="78"
+          font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+          font-size="64" font-weight="700" fill="#e8e8f0" letter-spacing="3">
+      Hush
+    </text>
+
+    <!-- Tagline -->
+    <text x="202" y="108"
+          font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+          font-size="16" font-weight="500" fill="#9b59b6" letter-spacing="4" opacity="0.95">
+      SPEAK FREELY · STAY VEILED
+    </text>
+
+    <text x="202" y="132"
+          font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+          font-size="14" font-weight="400" fill="#8888a8" letter-spacing="1.5">
+      Anonymous confessions on Midnight
+    </text>
+  </g>
+
+  <!-- Bottom accent line -->
+  <rect x="0" y="316" width="1280" height="4" fill="url(#accent)"/>
+
+  <!-- Buildathon attribution -->
+  <text x="640" y="296"
+        font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
+        font-size="11" font-weight="400" fill="#666688" letter-spacing="2" text-anchor="middle">
+    MIDNIGHT BUILDATHON · WAVE 2
+  </text>
+</svg>

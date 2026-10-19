@@ -102,9 +102,14 @@ export circuit confess(
 // confession commitment. This set membership check prevents double-reactions
 // without revealing who reacted.
 export circuit react(confessionCommit: Bytes<32>): [] {
-  assert(confessionCommits.member(confessionCommit), "Confession does not exist");
+  // confessionCommit is caller-supplied, so we explicitly disclose it to the
+  // ledger membership check. This is safe: commitments are already hash-derived
+  // and are intentionally public — the confessionCommits set is public state.
+  assert(confessionCommits.member(disclose(confessionCommit)), "Confession does not exist");
   const _secret = localSecretKey();
   const reactorKey = getDappPublicKey(_secret);
+  // reactCommit is derived from persistentCommit, so it is ledger-safe and
+  // does not need disclose() — same pattern as the private-guest-list example.
   const reactCommit = persistentCommit<Bytes<32>>(confessionCommit, reactorKey);
   assert(!reactionCommits.member(reactCommit), "You have already reacted to this confession");
   reactionCommits.insert(reactCommit);
@@ -129,12 +134,12 @@ export circuit takeDown(contentHash: Bytes<32>): [] {
 // moderator DApp key WITHOUT revealing which moderator they are. This is the
 // core ZK-for-moderation pattern: accountability without identity exposure.
 export circuit flag(confessionCommit: Bytes<32>): [] {
-  assert(confessionCommits.member(confessionCommit), "Confession does not exist");
+  assert(confessionCommits.member(disclose(confessionCommit)), "Confession does not exist");
   const _secret = localSecretKey();
   const callerKey = getDappPublicKey(_secret);
   assert(moderator == callerKey, "Only a moderator can flag confessions");
-  assert(!flaggedCommits.member(confessionCommit), "Confession is already flagged");
-  flaggedCommits.insert(confessionCommit);
+  assert(!flaggedCommits.member(disclose(confessionCommit)), "Confession is already flagged");
+  flaggedCommits.insert(disclose(confessionCommit));
   totalFlags.increment(1);
 }
 
@@ -144,20 +149,21 @@ export circuit unflag(confessionCommit: Bytes<32>): [] {
   const _secret = localSecretKey();
   const callerKey = getDappPublicKey(_secret);
   assert(moderator == callerKey, "Only a moderator can unflag confessions");
-  assert(flaggedCommits.member(confessionCommit), "Confession is not flagged");
-  flaggedCommits.remove(confessionCommit);
+  assert(flaggedCommits.member(disclose(confessionCommit)), "Confession is not flagged");
+  flaggedCommits.remove(disclose(confessionCommit));
 }
 
 // Read-only circuits for clients / judges to inspect public ledger state.
-export pure circuit confessionCount(): Uint<32> {
+// These cannot be `pure` because they read from the public ledger counters.
+export circuit confessionCount(): Uint<32> {
   return totalConfessions as Field as Uint<32>;
 }
 
-export pure circuit reactionCount(): Uint<32> {
+export circuit reactionCount(): Uint<32> {
   return totalReactions as Field as Uint<32>;
 }
 
-export pure circuit flagCount(): Uint<32> {
+export circuit flagCount(): Uint<32> {
   return totalFlags as Field as Uint<32>;
 }
 

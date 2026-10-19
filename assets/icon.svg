@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0e27"/>
+      <stop offset="1" stop-color="#1a1b3a"/>
+    </linearGradient>
+    <linearGradient id="moon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8e8f0"/>
+      <stop offset="1" stop-color="#b8b8d4"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect width="256" height="256" rx="48" fill="url(#bg)"/>
+
+  <!-- Crescent moon (the silence / night symbol) -->
+  <g filter="url(#glow)">
+    <path d="M 168 128
+             A 56 56 0 1 1 112 72
+             A 44 44 0 1 0 168 128 Z"
+          fill="url(#moon)"/>
+  </g>
+
+  <!-- Whisper dots emanating from moon (the "shh" motif) -->
+  <g fill="#9b59b6" opacity="0.85">
+    <circle cx="196" cy="96" r="3"/>
+    <circle cx="208" cy="84" r="2.5"/>
+    <circle cx="218" cy="74" r="2"/>
+    <circle cx="200" cy="110" r="2"/>
+    <circle cx="212" cy="104" r="1.5"/>
+  </g>
+
+  <!-- Small star top-left for balance -->
+  <g fill="#e8e8f0" opacity="0.6">
+    <circle cx="64" cy="72" r="1.5"/>
+    <circle cx="80" cy="60" r="1"/>
+    <circle cx="56" cy="92" r="1"/>
+  </g>
+</svg>
